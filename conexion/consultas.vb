@@ -287,24 +287,24 @@ Public Class consultas
 	                                  V.U_SO1_CLIENTE + ' - ' + OCRD.CardName [SOCIO],
 	                                  VD.U_SO1_NUMEROARTICULO, VD.U_SO1_DESCRIPCION, VD.U_SO1_CANTIDAD [CANTIDADVENTA], U_SO1_NUMEROLOTE = '', [CANTIDADLOTE] = 0,
                                     VD.U_SO1_ALMACEN, UNIDAD = T2.SalUnitMsr
-                                  FROM [@SO1_01VENTA] V
-                                  JOIN [@SO1_01VENTADETALLE] VD ON VD.U_SO1_FOLIO = V.Name
+                                  FROM [@SO1_01VENTA] V WITH (NOLOCK)
+                                  JOIN [@SO1_01VENTADETALLE] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
                                   -- JOIN [@SO1_01NUMEROLOTE] NL ON NL.U_SO1_FOLIO = VD.U_SO1_FOLIO 
                                   JOIN OSLP ON OSLP.SlpCode = V.U_SO1_VENDEDOR
 	                                 -- AND NL.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO
-                                  JOIN OHEM ON OHEM.empID = V.U_SO1_USUARIO
-                                  JOIN OCRD ON OCRD.CardCode = V.U_SO1_CLIENTE
-                                  INNER JOIN OITM t2 on t2.ItemCode = VD.U_SO1_NUMEROARTICULO AND T2.U_Lote = 'Y'
+                                  JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
+                                  JOIN OCRD WITH (NOLOCK) ON OCRD.CardCode = V.U_SO1_CLIENTE
+                                  INNER JOIN OITM t2 WITH (NOLOCK) on t2.ItemCode = VD.U_SO1_NUMEROARTICULO AND T2.U_Lote = 'Y'
                                   WHERE V.U_SO1_TIPO IN ('CR', 'CA')
                                        AND EXISTS (SELECT 1 
-				                                        FROM LOTESMOV T1 
+				                                        FROM LOTESMOV T1 WITH (NOLOCK) 
 				                                        WHERE T1.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO 
 						                                        AND T1.ALMACEN = VD.U_SO1_ALMACEN 
 						                                        AND T1.TIPOMOV in ('10', 'DE', 'EP', 'EX', 'FP', 'EM', 'RP', 'E')
 						                                        AND T1.EXISTENCIA > 0
 						                                        AND (CONVERT(VARCHAR, T1.FECHAMOV, 112) <= CONVERT(VARCHAR, V.U_SO1_FECHA, 112)))
                                       AND VD.U_SO1_CANTIDAD > ISNULL((SELECT SUM (T10.CANTIDAD)
-                                                                      FROM LOTESMOV T10
+                                                                      FROM LOTESMOV T10 WITH (NOLOCK)
                                                                       WHERE T10.TIPOMOV <> '99'
                                                                             AND T10.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO
                                                                             AND t10.U_SO1_NUMPARTIDA = VD.U_SO1_NUMPARTIDA
@@ -320,17 +320,17 @@ Public Class consultas
 	                                  V.U_SO1_CLIENTE + ' - ' + OCRD.CardName [SOCIO],
 	                                  VD.U_SO1_NUMEROARTICULO, VD.U_SO1_DESCRIPCION, VD.U_SO1_CANTIDAD [CANTIDADVENTA], U_SO1_NUMEROLOTE = '', [CANTIDADLOTE] = 0,
                                     VD.U_SO1_ALMACEN, UNIDAD = T2.SalUnitMsr
-                                  FROM [@SO1_01DEVOLUCION] V
-                                  JOIN [@SO1_01DEVOLUCIONDET] VD ON VD.U_SO1_FOLIO = V.Name
+                                  FROM [@SO1_01DEVOLUCION] V WITH (NOLOCK)
+                                  JOIN [@SO1_01DEVOLUCIONDET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
                                   -- JOIN [@SO1_01NUMEROLOTE] NL ON NL.U_SO1_FOLIO = VD.U_SO1_FOLIO 
-                                  JOIN OSLP ON OSLP.SlpCode = V.U_SO1_VENDEDOR
+                                  JOIN OSLP WITH (NOLOCK) ON OSLP.SlpCode = V.U_SO1_VENDEDOR
 	                                 -- AND NL.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO
-                                  JOIN OHEM ON OHEM.empID = V.U_SO1_USUARIO
-                                  JOIN OCRD ON OCRD.CardCode = V.U_SO1_CLIENTE
-                                  INNER JOIN OITM t2 on t2.ItemCode = VD.U_SO1_NUMEROARTICULO AND T2.U_Lote = 'Y'
+                                  JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
+                                  JOIN OCRD WITH (NOLOCK) ON OCRD.CardCode = V.U_SO1_CLIENTE
+                                  INNER JOIN OITM t2 WITH (NOLOCK) on t2.ItemCode = VD.U_SO1_NUMEROARTICULO AND T2.U_Lote = 'Y'
                                   WHERE CONVERT(VARCHAR, V.U_SO1_FECHA, 112) >= CONVERT(VARCHAR, @fechaActual, 112)
                                          AND VD.U_SO1_CANTIDAD > ISNULL((SELECT SUM (T10.CANTIDAD)
-                                                                          FROM LOTESMOV T10
+                                                                          FROM LOTESMOV T10 WITH (NOLOCK)
                                                                           WHERE T10.TIPOMOV <> '99'
                                                                                 AND T10.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO
                                                                                 AND t10.U_SO1_NUMPARTIDA = VD.U_SO1_NUMPARTIDA
@@ -350,15 +350,15 @@ Public Class consultas
 	                                  V.U_SO1_PROVEEDOR + ' - ' + OCRD.CardName [SOCIO],
 	                                  VD.U_SO1_NUMEROARTICULO, VD.U_SO1_DESCRIPCION, VD.U_SO1_CANTIDAD [CANTIDADVENTA], U_SO1_NUMEROLOTE = '', [CANTIDADLOTE] = 0,
                                     VD.U_SO1_ALMACEN, UNIDAD = T2.SalUnitMsr 
-                                  FROM [@SO1_01COMPRA] V
-                                  JOIN [@SO1_01COMPRADETALLE] VD ON VD.U_SO1_FOLIO = V.Name
+                                  FROM [@SO1_01COMPRA] V WITH (NOLOCK)
+                                  JOIN [@SO1_01COMPRADETALLE] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
                                   -- JOIN [@SO1_01NUMEROLOTE] NL ON NL.U_SO1_FOLIO = VD.U_SO1_FOLIO 
-                                  JOIN OHEM ON OHEM.empID = V.U_SO1_USUARIO
-                                  JOIN OCRD ON OCRD.CardCode = V.U_SO1_PROVEEDOR
-                                  INNER JOIN OITM t2 on t2.ItemCode = VD.U_SO1_NUMEROARTICULO AND T2.U_Lote = 'Y'
+                                  JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
+                                  JOIN OCRD WITH (NOLOCK) ON OCRD.CardCode = V.U_SO1_PROVEEDOR
+                                  INNER JOIN OITM t2 WITH (NOLOCK) on t2.ItemCode = VD.U_SO1_NUMEROARTICULO AND T2.U_Lote = 'Y'
                                   WHERE CONVERT(VARCHAR, V.U_SO1_FECHA, 112) >= CONVERT(VARCHAR, @fechaActual, 112)
                                         AND VD.U_SO1_CANTIDAD > ISNULL((SELECT SUM (T10.CANTIDAD)
-                                                                          FROM LOTESMOV T10
+                                                                          FROM LOTESMOV T10 WITH (NOLOCK)
                                                                           WHERE T10.TIPOMOV <> '99'
                                                                                 AND T10.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO
                                                                                 AND t10.U_SO1_NUMPARTIDA = VD.U_SO1_NUMPARTIDA
@@ -378,22 +378,22 @@ Public Class consultas
 	                                  V.U_SO1_PROVEEDOR + ' - ' + OCRD.CardName [SOCIO],
 	                                  VD.U_SO1_NUMEROARTICULO, OITM.ItemName, VD.U_SO1_CANTIDAD [CANTIDADVENTA], U_SO1_NUMEROLOTE = '', [CANTIDADLOTE] = 0,
                                     VD.U_SO1_ALMACEN, UNIDAD = T2.SalUnitMsr
-                                  FROM [@SO1_01DEVOLCOMPRA] V
-                                  JOIN [@SO1_01DEVOLCOMPRADE] VD ON VD.U_SO1_FOLIO = V.Name
+                                  FROM [@SO1_01DEVOLCOMPRA] V WITH (NOLOCK)
+                                  JOIN [@SO1_01DEVOLCOMPRADE] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
                                   -- JOIN [@SO1_01NUMEROLOTE] NL ON NL.U_SO1_FOLIO = VD.U_SO1_FOLIO 
-                                  JOIN OHEM ON OHEM.empID = V.U_SO1_USUARIO
-                                  JOIN OCRD ON OCRD.CardCode = V.U_SO1_PROVEEDOR
-                                  JOIN OITM ON OITM.ItemCode = VD.U_SO1_NUMEROARTICULO AND OITM.U_Lote = 'Y'
-                                  INNER JOIN OITM t2 on t2.ItemCode = VD.U_SO1_NUMEROARTICULO
+                                  JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
+                                  JOIN OCRD WITH (NOLOCK) ON OCRD.CardCode = V.U_SO1_PROVEEDOR
+                                  JOIN OITM WITH (NOLOCK) ON OITM.ItemCode = VD.U_SO1_NUMEROARTICULO AND OITM.U_Lote = 'Y'
+                                  INNER JOIN OITM t2 WITH (NOLOCK) on t2.ItemCode = VD.U_SO1_NUMEROARTICULO
                                   WHERE EXISTS (SELECT 1 
-				                                  FROM LOTESMOV T1 
+				                                  FROM LOTESMOV T1 WITH (NOLOCK)
 				                                  WHERE T1.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO 
 						                                  AND T1.ALMACEN = VD.U_SO1_ALMACEN 
 						                                  AND T1.TIPOMOV in ('10', 'DE', 'EP', 'EX', 'FP', 'EM', 'RP', 'E')
 						                                  AND T1.EXISTENCIA > 0
 						                                  AND (CONVERT(VARCHAR, T1.FECHAMOV, 112) <= CONVERT(VARCHAR, V.U_SO1_FECHA, 112)))
                                               AND VD.U_SO1_CANTIDAD > ISNULL((SELECT SUM (T10.CANTIDAD)
-                                                                              FROM LOTESMOV T10
+                                                                              FROM LOTESMOV T10 WITH (NOLOCK)
                                                                               WHERE T10.TIPOMOV <> '99'
                                                                                     AND T10.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO
                                                                                     AND t10.U_SO1_NUMPARTIDA = VD.U_SO1_NUMPARTIDA
@@ -413,21 +413,21 @@ Public Class consultas
 	                                  '' [SOCIO],
 	                                  VD.U_SO1_NUMEROARTICULO, VD.U_SO1_DESCRIPCION, VD.U_SO1_CANTIDAD [CANTIDADVENTA], U_SO1_NUMEROLOTE = '', [CANTIDADLOTE] = 0,
                                     V.U_SO1_ALMACEN, UNIDAD = T2.SalUnitMsr
-                                  FROM [@SO1_01TRASPASO] V
-                                  JOIN [@SO1_01TRASPASODET] VD ON VD.U_SO1_FOLIO = V.U_SO1_FOLIO AND VD.U_SO1_INSTANCIA = V.U_SO1_INSTANCIA
+                                  FROM [@SO1_01TRASPASO] V WITH (NOLOCK)
+                                  JOIN [@SO1_01TRASPASODET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.U_SO1_FOLIO AND VD.U_SO1_INSTANCIA = V.U_SO1_INSTANCIA
                                   -- JOIN [@SO1_01NUMEROLOTE] NL ON NL.U_SO1_FOLIO = VD.U_SO1_FOLIO 
                                   JOIN OHEM ON OHEM.empID = V.U_SO1_USUARIO
                                   INNER JOIN OITM t2 on t2.ItemCode = VD.U_SO1_NUMEROARTICULO AND t2.U_Lote = 'Y'
                                   WHERE V.U_SO1_TIPO = 'S'
                                         AND EXISTS (SELECT 1 
-				                                            FROM LOTESMOV T1 
+				                                            FROM LOTESMOV T1 WITH (NOLOCK) 
 				                                            WHERE T1.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO 
 						                                            AND T1.ALMACEN = V.U_SO1_ALMACEN 
 						                                            AND T1.TIPOMOV in ('10', 'DE', 'EP', 'EX', 'FP', 'EM', 'RP', 'E')
 						                                            AND T1.EXISTENCIA > 0
 						                                            AND (CONVERT(VARCHAR, T1.FECHAMOV, 112) <= CONVERT(VARCHAR, V.U_SO1_FECHA, 112)))
                                         AND VD.U_SO1_CANTIDAD > ISNULL((SELECT SUM (T10.CANTIDAD)
-                                                                        FROM LOTESMOV T10
+                                                                        FROM LOTESMOV T10 WITH (NOLOCK)
                                                                         WHERE T10.TIPOMOV <> '99'
                                                                               AND T10.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO
                                                                               AND t10.U_SO1_NUMPARTIDA = VD.U_SO1_NUMPARTIDA
@@ -447,21 +447,21 @@ Public Class consultas
 	                                  '' [SOCIO],
 	                                  VD.U_SO1_NUMEROARTICULO, VD.U_SO1_DESCRIPCION, VD.U_SO1_CANTIDAD [CANTIDADVENTA], U_SO1_NUMEROLOTE = '', [CANTIDADLOTE] = 0,
                                     V.U_SO1_ALMACEN, UNIDAD = T2.SalUnitMsr
-                                  FROM [@SO1_01TRASPASO] V
-                                  JOIN [@SO1_01TRASPASODET] VD ON VD.U_SO1_FOLIO = V.U_SO1_FOLIO
+                                  FROM [@SO1_01TRASPASO] V WITH (NOLOCK)
+                                  JOIN [@SO1_01TRASPASODET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.U_SO1_FOLIO
                                   -- JOIN [@SO1_01NUMEROLOTE] NL ON NL.U_SO1_FOLIO = VD.U_SO1_FOLIO 
                                   JOIN OHEM ON OHEM.empID = V.U_SO1_USUARIO
                                   INNER JOIN OITM t2 on t2.ItemCode = VD.U_SO1_NUMEROARTICULO AND t2.U_Lote = 'Y'
                                   WHERE V.U_SO1_TIPO = 'X'
                                         AND EXISTS (SELECT 1 
-				                                            FROM LOTESMOV T1 
+				                                            FROM LOTESMOV T1 WITH (NOLOCK) 
 				                                            WHERE T1.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO 
 						                                            AND T1.ALMACEN = V.U_SO1_ALMACEN 
 						                                            AND T1.TIPOMOV in ('10', 'DE', 'EP', 'EX', 'FP', 'EM', 'RP', 'E')
 						                                            AND T1.EXISTENCIA > 0
 						                                            AND (CONVERT(VARCHAR, T1.FECHAMOV, 112) <= CONVERT(VARCHAR, V.U_SO1_FECHA, 112)))
                                         AND VD.U_SO1_CANTIDAD > ISNULL((SELECT SUM (T10.CANTIDAD)
-                                                                        FROM LOTESMOV T10
+                                                                        FROM LOTESMOV T10 WITH (NOLOCK)
                                                                         WHERE T10.TIPOMOV <> '99'
                                                                               AND T10.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO
                                                                               AND t10.U_SO1_NUMPARTIDA = VD.U_SO1_NUMPARTIDA
@@ -481,15 +481,15 @@ Public Class consultas
 	                                      '' [SOCIO],
 	                                      VD.U_SO1_NUMEROARTICULO, VD.U_SO1_DESCRIPCION, VD.U_SO1_CANTIDAD [CANTIDADVENTA], U_SO1_NUMEROLOTE = '', [CANTIDADLOTE] = 0,
                                         V.U_SO1_ALMACEN, UNIDAD = T2.SalUnitMsr
-                                      FROM [@SO1_01TRASPASO] V
-                                      JOIN [@SO1_01TRASPASODET] VD ON VD.U_SO1_FOLIO = V.U_SO1_FOLIO AND VD.U_SO1_INSTANCIA = V.U_SO1_INSTANCIA
+                                      FROM [@SO1_01TRASPASO] V WITH (NOLOCK)
+                                      JOIN [@SO1_01TRASPASODET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.U_SO1_FOLIO AND VD.U_SO1_INSTANCIA = V.U_SO1_INSTANCIA
                                       -- JOIN [@SO1_01NUMEROLOTE] NL ON NL.U_SO1_FOLIO = VD.U_SO1_FOLIO 
                                       JOIN OHEM ON OHEM.empID = V.U_SO1_USUARIO
                                       INNER JOIN OITM t2 on t2.ItemCode = VD.U_SO1_NUMEROARTICULO  AND t2.U_Lote = 'Y'
                                       WHERE V.U_SO1_TIPO = 'E'
                                           AND CONVERT(VARCHAR, V.U_SO1_FECHA, 112) >= CONVERT(VARCHAR, @fechaActual, 112)
                                           AND VD.U_SO1_CANTIDAD > ISNULL((SELECT SUM (T10.CANTIDAD)
-                                                                          FROM LOTESMOV T10
+                                                                          FROM LOTESMOV T10 WITH (NOLOCK)
                                                                           WHERE T10.TIPOMOV <> '99'
                                                                                 AND T10.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO
                                                                                 AND t10.U_SO1_NUMPARTIDA = VD.U_SO1_NUMPARTIDA
@@ -506,20 +506,20 @@ Public Class consultas
 	                                  '' [SOCIO],
 	                                  VD.U_SO1_NUMEROARTICULO, VD.U_SO1_DESCRIPCION, VD.U_SO1_CANTIDAD [CANTIDADVENTA], U_SO1_NUMEROLOTE = '', [CANTIDADLOTE] = 0,
                                     VD.U_SO1_ALMACEN, UNIDAD = T2.SalUnitMsr
-                                  FROM [@SO1_01SALIDAMERCAN] V
-                                  JOIN [@SO1_01SALIDAMERDET] VD ON VD.U_SO1_FOLIO = V.Name
+                                  FROM [@SO1_01SALIDAMERCAN] V WITH (NOLOCK)
+                                  JOIN [@SO1_01SALIDAMERDET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
                                   -- JOIN [@SO1_01NUMEROLOTE] NL ON NL.U_SO1_FOLIO = VD.U_SO1_FOLIO 
-                                  JOIN OHEM ON OHEM.empID = V.U_SO1_USUARIO
-                                  INNER JOIN OITM t2 on t2.ItemCode = VD.U_SO1_NUMEROARTICULO  AND t2.U_Lote = 'Y'
+                                  JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
+                                  INNER JOIN OITM t2 WITH (NOLOCK) on t2.ItemCode = VD.U_SO1_NUMEROARTICULO  AND t2.U_Lote = 'Y'
                                   WHERE EXISTS (SELECT 1 
-				                                        FROM LOTESMOV T1 
+				                                        FROM LOTESMOV T1 WITH (NOLOCK)
 				                                        WHERE T1.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO 
 						                                        AND T1.ALMACEN = VD.U_SO1_ALMACEN 
 						                                        AND T1.TIPOMOV in ('10', 'DE', 'EP', 'EX', 'FP', 'EM', 'RP', 'E')
 						                                        AND T1.EXISTENCIA > 0
 						                                        AND (CONVERT(VARCHAR, T1.FECHAMOV, 112) <= CONVERT(VARCHAR, V.U_SO1_FECHA, 112)))
                                         AND VD.U_SO1_CANTIDAD > ISNULL((SELECT SUM (T10.CANTIDAD)
-                                                                          FROM LOTESMOV T10
+                                                                          FROM LOTESMOV T10 WITH (NOLOCK)
                                                                           WHERE T10.TIPOMOV <> '99'
                                                                                 AND T10.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO
                                                                                 AND t10.U_SO1_NUMPARTIDA = VD.U_SO1_NUMPARTIDA
@@ -536,14 +536,14 @@ Public Class consultas
 	                                  '' [SOCIO],
 	                                  VD.U_SO1_NUMEROARTICULO, VD.U_SO1_DESCRIPCION, VD.U_SO1_CANTIDAD [CANTIDADVENTA], U_SO1_NUMEROLOTE = '', [CANTIDADLOTE] = 0,
                                     VD.U_SO1_ALMACEN, UNIDAD = T2.SalUnitMsr
-                                  FROM [@SO1_01ENTRADAMERCAN] V
-                                  JOIN [@SO1_01ENTRADAMERDET] VD ON VD.U_SO1_FOLIO = V.Name
+                                  FROM [@SO1_01ENTRADAMERCAN] V WITH (NOLOCK)
+                                  JOIN [@SO1_01ENTRADAMERDET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
                                   -- JOIN [@SO1_01NUMEROLOTE] NL ON NL.U_SO1_FOLIO = VD.U_SO1_FOLIO 
-                                  JOIN OHEM ON OHEM.empID = V.U_SO1_USUARIO
-                                  INNER JOIN OITM t2 on t2.ItemCode = VD.U_SO1_NUMEROARTICULO  AND t2.U_Lote = 'Y'
+                                  JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
+                                  INNER JOIN OITM t2 WITH (NOLOCK) on t2.ItemCode = VD.U_SO1_NUMEROARTICULO  AND t2.U_Lote = 'Y'
                                   WHERE CONVERT(VARCHAR, V.U_SO1_FECHA, 112) >= CONVERT(VARCHAR, @fechaActual, 112)
                                         AND VD.U_SO1_CANTIDAD > ISNULL((SELECT SUM (T10.CANTIDAD)
-                                                                          FROM LOTESMOV T10
+                                                                          FROM LOTESMOV T10 WITH (NOLOCK)
                                                                           WHERE T10.TIPOMOV <> '99'
                                                                                 AND T10.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO
                                                                                 AND t10.U_SO1_NUMPARTIDA = VD.U_SO1_NUMPARTIDA
@@ -560,20 +560,20 @@ Public Class consultas
 	                                  '' [SOCIO],
 	                                  VD.U_SO1_NUMEROARTICULO,  T2.ItemName [U_SO1_DESCRIPCION], VD.U_SO1_CANTIDADREQUE [CANTIDADVENTA], U_SO1_NUMEROLOTE = '', [CANTIDADLOTE] = 0,
                                     VD.U_SO1_ALMACEN, UNIDAD = T2.SalUnitMsr
-                                  FROM [@SO1_01PRODUCCION] V
-                                  JOIN [@SO1_01PRODUCCIONDET] VD ON VD.U_SO1_FOLIO = V.Name
+                                  FROM [@SO1_01PRODUCCION] V WITH (NOLOCK)
+                                  JOIN [@SO1_01PRODUCCIONDET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
                                   -- JOIN [@SO1_01NUMEROLOTE] NL ON NL.U_SO1_FOLIO = VD.U_SO1_FOLIO 
-                                  JOIN OHEM ON OHEM.empID = V.U_SO1_USUARIO
-                                  INNER JOIN OITM t2 on t2.ItemCode = VD.U_SO1_NUMEROARTICULO  AND t2.U_Lote = 'Y'
+                                  JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
+                                  INNER JOIN OITM t2 WITH (NOLOCK) on t2.ItemCode = VD.U_SO1_NUMEROARTICULO  AND t2.U_Lote = 'Y'
                                   WHERE EXISTS (SELECT 1 
-				                                        FROM LOTESMOV T1 
+				                                        FROM LOTESMOV T1 WITH (NOLOCK)
 				                                        WHERE T1.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO 
 						                                        AND T1.ALMACEN = VD.U_SO1_ALMACEN 
 						                                        AND T1.TIPOMOV in ('10', 'DE', 'EP', 'EX', 'FP', 'EM', 'RP', 'E')
 						                                        AND T1.EXISTENCIA > 0
 						                                        AND (CONVERT(VARCHAR, T1.FECHAMOV, 112) <= CONVERT(VARCHAR, V.U_SO1_FECHA, 112)))
                                         AND VD.U_SO1_CANTIDADREQUE > ISNULL((SELECT SUM (T10.CANTIDAD)
-                                                                          FROM LOTESMOV T10
+                                                                          FROM LOTESMOV T10 WITH (NOLOCK)
                                                                           WHERE T10.TIPOMOV <> '99'
                                                                                 AND T10.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO
                                                                                 AND t10.U_SO1_NUMPARTIDA = VD.U_SO1_NUMPARTIDA
@@ -976,7 +976,7 @@ Public Class consultas
             ctdEntrada = oLote.CANTIDAD
 
             If (ctdMovEntSal + ctdEntrada) >= 0 Then
-                ctdActual = ctdEntrada - ctdMovEntSal
+                ctdActual = ctdEntrada + ctdMovEntSal  ' ctdMovEntSal = viene en negativo porque siempre acumula todas las salidas.
             End If
 
         Catch ex As Exception
@@ -1347,7 +1347,20 @@ Public Class consultas
             pass = DBcomando.ExecuteScalar()
 
             If pass <> asPassw Then
-                resutado = False
+
+                pass = ""
+
+                DBcomando = New SqlCommand("select passw = CONVERT(VARCHAR(MAX), DECRYPTBYPASSPHRASE('Electrico2012', T2.PASSW))
+                                  from  [@SO1_01AUTEMPROL] T1 INNER JOIN LOTESUSUARIOS T2 ON T2.CODE = T1.CODE
+	                                 where t1.CODE = @USUARIO ", DBConn)
+                DBcomando.Parameters.AddWithValue("@USUARIO", asUsuario)
+
+                pass = DBcomando.ExecuteScalar()
+
+                If pass <> asPassw Then
+                    resutado = False
+                End If
+
             End If
 
         Catch ex As Exception
