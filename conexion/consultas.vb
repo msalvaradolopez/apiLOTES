@@ -8,6 +8,7 @@ Imports iTextSharp
 Imports iTextSharp.text
 Imports iTextSharp.text.pdf
 Imports iTextSharp.text.pdf.draw
+Imports System.Globalization
 
 Public Class consultas
 
@@ -189,7 +190,7 @@ Public Class consultas
             If String.IsNullOrEmpty(oLote.FECHADOC) Then
                 DBcomando.Parameters.AddWithValue("@FECHADOC", fechaActual)
             Else
-                DBcomando.Parameters.AddWithValue("@FECHADOC", oLote.FECHADOC)
+                DBcomando.Parameters.AddWithValue("@FECHADOC", DateTime.ParseExact(oLote.FECHADOC, "dd/MM/yyyy", CultureInfo.InvariantCulture))
             End If
 
             DBcomando.Parameters.AddWithValue("@SOCIO", oLote.SOCIO)
