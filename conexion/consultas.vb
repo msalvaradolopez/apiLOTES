@@ -8,7 +8,10 @@ Imports iTextSharp
 Imports iTextSharp.text
 Imports iTextSharp.text.pdf
 Imports iTextSharp.text.pdf.draw
+Imports PdfSharp.Pdf
+Imports PdfSharp.Drawing
 Imports System.Globalization
+
 
 Public Class consultas
 
@@ -50,6 +53,190 @@ Public Class consultas
         Finally
             DBConn.Close()
         End Try
+    End Function
+
+
+
+    ' New safer PDF generator using the same template but with a more robust iTextSharp initialization
+    Public Function GenerarPDFv2(oLotes() As tbLote) As String
+        Dim pgSize As New iTextSharp.text.Rectangle(283.46, 141.732, RotateFlipType.Rotate90FlipNone)
+        Dim oDoc As New iTextSharp.text.Document(pgSize, 0, 0, 0, 0)
+        Dim pdfw As iTextSharp.text.pdf.PdfWriter = Nothing
+        Dim cb As PdfContentByte = Nothing
+        Dim fuente As iTextSharp.text.pdf.BaseFont = Nothing
+        Dim pdfBase64 As String = Nothing
+        Dim fechaActual = Date.Now()
+
+        If oLotes Is Nothing OrElse oLotes.Length = 0 Then
+            Return Nothing
+        End If
+
+        Try
+            ' Ensure iTextSharp Version is initialized from the loaded assembly to avoid Assembly.GetEntryAssembly() null issue
+            Try
+                Dim loadedAsm = GetType(iTextSharp.text.Document).Assembly
+                Dim verType = loadedAsm.GetType("iTextSharp.text.Version")
+                If verType IsNot Nothing Then
+                    Dim asmType = GetType(System.Reflection.Assembly)
+                    Dim mi = verType.GetMethod("GetInstance", System.Reflection.BindingFlags.Public Or System.Reflection.BindingFlags.Static, Nothing, New Type() {asmType}, Nothing)
+                    If mi IsNot Nothing Then
+                        mi.Invoke(Nothing, New Object() {loadedAsm})
+                    Else
+                        Dim miNoArg = verType.GetMethod("GetInstance", System.Reflection.BindingFlags.Public Or System.Reflection.BindingFlags.Static, Nothing, Type.EmptyTypes, Nothing)
+                        If miNoArg IsNot Nothing Then miNoArg.Invoke(Nothing, Nothing)
+                    End If
+                End If
+            Catch
+                ' ignore; we'll still try to create the writer and handle NRE there
+            End Try
+
+            Dim pdfBytes() As Byte = Nothing
+            Using ms As New MemoryStream()
+                Try
+                    pdfw = PdfWriter.GetInstance(oDoc, ms)
+                Catch ex As NullReferenceException
+                    ' Known iTextSharp issue in some hosts; return gracefully
+                    Return Nothing
+                End Try
+
+                oDoc.Open()
+                cb = pdfw.DirectContent
+
+                For Each lote As tbLote In oLotes
+                    If lote Is Nothing Then Continue For
+                    If lote.IMPRIMIR = "N" Then Continue For
+                    If Not setEstatusImprimir(lote) Then Continue For
+
+                    oDoc.NewPage()
+
+                    cb.BeginText()
+                    fuente = FontFactory.GetFont(FontFactory.HELVETICA, iTextSharp.text.Font.DEFAULTSIZE, iTextSharp.text.Font.NORMAL).BaseFont
+                    cb.SetFontAndSize(fuente, 14)
+                    cb.ShowTextAligned(PdfContentByte.ALIGN_LEFT, If(lote.IDLOTE, String.Empty), 10, 130, 0)
+
+                    Dim BarcodeLineas As New Barcode128()
+                    BarcodeLineas.BarHeight = 30
+                    BarcodeLineas.Code = If(lote.IDLOTE, String.Empty)
+                    BarcodeLineas.GenerateChecksum = True
+                    BarcodeLineas.CodeType = Barcode128.CODE128
+
+                    Dim bm As New Bitmap(BarcodeLineas.CreateDrawingImage(Color.Black, Color.White))
+                    Using smBMP As New MemoryStream()
+                        bm.Save(smBMP, ImageFormat.Bmp)
+                        Dim bmBytes As Byte() = smBMP.ToArray()
+                        Dim imagen As iTextSharp.text.Image = iTextSharp.text.Image.GetInstance(bmBytes)
+                        imagen.ScaleToFit(150.0F, 40.0F)
+                        imagen.SetAbsolutePosition(10, 70)
+                        cb.AddImage(imagen)
+                    End Using
+
+                    cb.ShowTextAligned(PdfContentByte.ALIGN_LEFT, If(lote.EXISTENCIA.ToString(), String.Empty), 50, 50, 0)
+                    cb.ShowTextAligned(PdfContentByte.ALIGN_LEFT, If(lote.UNIDAD, String.Empty), 85, 50, 0)
+                    cb.ShowTextAligned(PdfContentByte.ALIGN_LEFT, If(lote.UBICACION, String.Empty), 150, 50, 0)
+
+                    cb.SetFontAndSize(fuente, 8)
+                    cb.ShowTextAligned(PdfContentByte.ALIGN_LEFT, If(lote.U_SO1_NUMEROARTICULO, String.Empty), 10, 40, 0)
+                    cb.ShowTextAligned(PdfContentByte.ALIGN_LEFT, If(lote.ItemName, String.Empty), 10, 30, 0)
+
+                    cb.SetFontAndSize(fuente, 6)
+                    cb.ShowTextAligned(PdfContentByte.ALIGN_LEFT, "Imp: " + If(lote.USERID, String.Empty), 10, 10, 0)
+                    cb.ShowTextAligned(PdfContentByte.ALIGN_LEFT, "Fecha Impresión: " + fechaActual.ToString("dd/MM/yyyy HH:mm"), 150, 10, 0)
+                    cb.EndText()
+                Next
+
+                pdfw.Flush()
+                oDoc.Close()
+                pdfBytes = ms.ToArray()
+            End Using
+
+            If pdfBytes IsNot Nothing Then
+                pdfBase64 = Convert.ToBase64String(pdfBytes)
+            End If
+
+        Catch ex As Exception
+            ' Do not leak exceptions here; return Nothing to keep behavior consistent with GenerarPDF
+            Return Nothing
+        Finally
+            cb = Nothing
+            pdfw = Nothing
+            oDoc = Nothing
+        End Try
+
+        Return pdfBase64
+    End Function
+
+    ' New PDF generator using PdfSharp instead of iTextSharp, modeled after GenerarPDF
+    Public Function GenerarPDFv3(oLotes() As tbLote) As String
+        If oLotes Is Nothing OrElse oLotes.Length = 0 Then
+            Return Nothing
+        End If
+
+        Dim pdfBase64 As String = Nothing
+        Try
+            Using ms As New MemoryStream()
+                Dim doc As New PdfSharp.Pdf.PdfDocument()
+
+                For Each lote As tbLote In oLotes
+                    If lote Is Nothing Then Continue For
+                    If lote.IMPRIMIR = "N" Then Continue For
+                    If Not setEstatusImprimir(lote) Then Continue For
+
+                    Dim page As PdfSharp.Pdf.PdfPage = doc.AddPage()
+                    page.Width = XUnit.FromPoint(283.46)
+                    page.Height = XUnit.FromPoint(141.732)
+
+                    Using gfx = XGraphics.FromPdfPage(page)
+                        Dim fontLarge = New XFont("Helvetica", 14, XFontStyle.Regular)
+                        Dim fontMed = New XFont("Helvetica", 8, XFontStyle.Regular)
+                        Dim fontSmall = New XFont("Helvetica", 6, XFontStyle.Regular)
+
+                        gfx.DrawString(If(lote.IDLOTE, String.Empty), fontLarge, XBrushes.Black, New XPoint(10, 20))
+
+                        Try
+                            Dim BarcodeLineas As New Barcode128()
+                            BarcodeLineas.BarHeight = 30
+                            BarcodeLineas.Code = If(lote.IDLOTE, String.Empty)
+                            BarcodeLineas.GenerateChecksum = True
+                            BarcodeLineas.CodeType = Barcode128.CODE128
+
+                            Using bm As Bitmap = New Bitmap(BarcodeLineas.CreateDrawingImage(Color.Black, Color.White))
+                                Using imgStream As New MemoryStream()
+                                    bm.Save(imgStream, ImageFormat.Bmp)
+                                    imgStream.Position = 0
+                                    imgStream.Position = 0
+                                    Using ximg = XImage.FromStream(imgStream)
+                                        gfx.DrawImage(ximg, 10, 30, 150, 40)
+                                    End Using
+                                End Using
+                            End Using
+                        Catch
+                            ' ignore barcode render errors
+                        End Try
+
+                        gfx.DrawString(If(lote.EXISTENCIA.ToString(), String.Empty), fontLarge, XBrushes.Black, New XPoint(50, 80))
+                        gfx.DrawString(If(lote.UNIDAD, String.Empty), fontLarge, XBrushes.Black, New XPoint(85, 80))
+                        gfx.DrawString(If(lote.UBICACION, String.Empty), fontLarge, XBrushes.Black, New XPoint(150, 80))
+
+                        gfx.DrawString(If(lote.U_SO1_NUMEROARTICULO, String.Empty), fontMed, XBrushes.Black, New XPoint(10, 100))
+                        gfx.DrawString(If(lote.ItemName, String.Empty), fontMed, XBrushes.Black, New XPoint(10, 115))
+
+                        gfx.DrawString("Imp: " + If(lote.USERID, String.Empty), fontSmall, XBrushes.Black, New XPoint(10, 135))
+                        gfx.DrawString("Fecha Impresión: " + Date.Now().ToString("dd/MM/yyyy HH:mm"), fontSmall, XBrushes.Black, New XPoint(150, 135))
+                    End Using
+                Next
+
+                doc.Save(ms, False)
+                ms.Position = 0
+                Dim bytes As Byte() = ms.ToArray()
+                If bytes IsNot Nothing Then
+                    pdfBase64 = Convert.ToBase64String(bytes)
+                End If
+            End Using
+        Catch
+            Return Nothing
+        End Try
+
+        Return pdfBase64
     End Function
 
     Public Function catArticuloPorID(itemcode As String, ExistenciaSiNo As String) As DataTable
