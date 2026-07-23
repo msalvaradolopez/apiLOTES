@@ -20,18 +20,20 @@ Public Class CortesController
                                     <FromUri()> ByVal Optional searchTerm As String = Nothing) As HttpResponseMessage
 
         Try
-            If String.IsNullOrEmpty(fechaInicio) Then fechaInicio = Date.Now().ToString("dd/MM/yyyy")
-            If String.IsNullOrEmpty(fechaFin) Then fechaFin = Date.Now().ToString("dd/MM/yyyy")
+            If String.IsNullOrEmpty(fechaInicio) Then fechaInicio = Date.Now().ToString("yyyy-MM-dd")
+            If String.IsNullOrEmpty(fechaFin) Then fechaFin = Date.Now().ToString("yyyy-MM-dd")
             If String.IsNullOrEmpty(tiposSalida) Then tiposSalida = "CA,SM,ED,CR,NC,SX,S,X,DX"
 
             If pageNumber < 1 Then pageNumber = 1
             If pageSize < 1 OrElse pageSize > 200 Then pageSize = 50
 
+            Dim lsError As String = ""
             Dim oConsultas As New consultas()
-            Dim dt As DataTable = oConsultas.getCortesDelDia(fechaInicio, fechaFin, tiposSalida, pageNumber, pageSize, searchTerm)
+            Dim dt As DataTable = oConsultas.getCortesDelDia(fechaInicio, fechaFin, tiposSalida, pageNumber, pageSize, searchTerm, lsError)
 
             If dt Is Nothing Then
-                Return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "Error al obtener los cortes del día.")
+                If String.IsNullOrEmpty(lsError) Then lsError = "Error al obtener los cortes del día."
+                Return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, lsError)
             End If
 
             Dim totalRecords As Integer = 0
@@ -42,7 +44,7 @@ Public Class CortesController
             Dim cortes As New List(Of CorteDTO)
             For Each row As DataRow In dt.Rows
                 Dim dto As New CorteDTO()
-                dto.Id = Convert.ToInt64(row("Id"))
+                dto.Id = Convert.ToInt64(row("RowNum"))
                 dto.Folio = If(row("Folio") IsNot DBNull.Value, row("Folio").ToString(), String.Empty)
                 dto.FechaHora = If(row("FechaHora") IsNot DBNull.Value, row("FechaHora").ToString(), String.Empty)
                 dto.TipoSalida = If(row("TipoSalida") IsNot DBNull.Value, row("TipoSalida").ToString(), String.Empty)
