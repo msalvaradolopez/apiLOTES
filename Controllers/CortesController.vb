@@ -44,15 +44,17 @@ Public Class CortesController
             Dim cortes As New List(Of CorteDTO)
             For Each row As DataRow In dt.Rows
                 Dim dto As New CorteDTO()
-                dto.Id = Convert.ToInt64(row("RowNum"))
+                dto.Id = Convert.ToInt64(row("Id"))
                 dto.IdLote = If(row("IdLote") IsNot DBNull.Value, row("IdLote").ToString(), String.Empty)
                 dto.Folio = If(row("Folio") IsNot DBNull.Value, row("Folio").ToString(), String.Empty)
                 dto.FechaHora = If(row("FechaHora") IsNot DBNull.Value, row("FechaHora").ToString(), String.Empty)
                 dto.TipoSalida = If(row("TipoSalida") IsNot DBNull.Value, row("TipoSalida").ToString(), String.Empty)
-                dto.TipoDescripcion = If(row("TipoDescripcion") IsNot DBNull.Value, row("TipoDescripcion").ToString(), String.Empty)
-                dto.Usuario = If(row("Usuario") IsNot DBNull.Value, row("Usuario").ToString(), String.Empty)
                 dto.Cantidad = If(row("Cantidad") IsNot DBNull.Value, Convert.ToDecimal(row("Cantidad")), 0)
-                dto.Estatus = If(row("Estatus") IsNot DBNull.Value, row("Estatus").ToString(), String.Empty)
+                dto.Existencia = If(row("Existencia") IsNot DBNull.Value, Convert.ToDecimal(row("Existencia")), 0)
+                dto.Ubicacion = If(row("Ubicacion") IsNot DBNull.Value, row("Ubicacion").ToString(), String.Empty)
+                dto.Usuario = If(row("Usuario") IsNot DBNull.Value, row("Usuario").ToString(), String.Empty)
+                dto.Almacen = If(row("Almacen") IsNot DBNull.Value, row("Almacen").ToString(), String.Empty)
+                dto.Socio = If(row("Socio") IsNot DBNull.Value, row("Socio").ToString(), String.Empty)
                 cortes.Add(dto)
             Next
 

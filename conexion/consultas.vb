@@ -1881,89 +1881,28 @@ Public Class consultas
 
                 WITH CortesCTE AS (
                     SELECT
-                        ROW_NUMBER() OVER (ORDER BY FechaHora DESC) AS RowNum,
+                        ROW_NUMBER() OVER (ORDER BY FECHAMOV DESC, IDMOV DESC) AS RowNum,
                         COUNT(*) OVER() AS TotalRecords,
-                        IdLote, Folio, FechaHora, TipoSalida, TipoDescripcion,
-                        Usuario, Cantidad, Estatus
-                    FROM (
-                        -- VENTAS (CA, CR)
-                        SELECT
-                            V.Name AS IdLote,
-                            V.Name AS Folio,
-                            CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
-                            V.U_SO1_TIPO AS TipoSalida,
-                            CASE V.U_SO1_TIPO WHEN 'CR' THEN 'CONTADO' WHEN 'CA' THEN 'CREDITO' ELSE '' END AS TipoDescripcion,
-                            CAST(V.U_SO1_USUARIO AS NVARCHAR(10)) + ' - ' + ISNULL(OHEM.firstName, '') AS Usuario,
-                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS Cantidad,
-                            'COMPLETADO' AS Estatus
-                        FROM [@SO1_01VENTA] V WITH (NOLOCK)
-                        JOIN [@SO1_01VENTADETALLE] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
-                        LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
-                        WHERE CHARINDEX(',' + V.U_SO1_TIPO + ',', @TiposCSV) > 0
-                          AND CONVERT(VARCHAR, V.U_SO1_FECHA, 112) BETWEEN @FecIni AND @FecFin
-                        GROUP BY V.Name, V.U_SO1_FECHA, V.U_SO1_HORACADENA, V.U_SO1_TIPO, V.U_SO1_USUARIO, OHEM.firstName
-
-                        UNION ALL
-
-                        -- SALIDA DE MERCANCIA (SX)
-                        SELECT
-                            V.Name AS IdLote,
-                            V.Name AS Folio,
-                            CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
-                            'SX' AS TipoSalida,
-                            'SALIDA MERCANCIA' AS TipoDescripcion,
-                            CAST(V.U_SO1_USUARIO AS NVARCHAR(10)) + ' - ' + ISNULL(OHEM.firstName, '') AS Usuario,
-                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS Cantidad,
-                            'COMPLETADO' AS Estatus
-                        FROM [@SO1_01SALIDAMERCAN] V WITH (NOLOCK)
-                        JOIN [@SO1_01SALIDAMERDET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
-                        LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
-                        WHERE CHARINDEX(',SX,', @TiposCSV) > 0
-                          AND CONVERT(VARCHAR, V.U_SO1_FECHA, 112) BETWEEN @FecIni AND @FecFin
-                        GROUP BY V.Name, V.U_SO1_FECHA, V.U_SO1_HORACADENA, V.U_SO1_USUARIO, OHEM.firstName
-
-                        UNION ALL
-
-                        -- DEVOLUCION COMPRA (DX)
-                        SELECT
-                            V.Name AS IdLote,
-                            V.Name AS Folio,
-                            CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
-                            'DX' AS TipoSalida,
-                            'DEV COMPRA' AS TipoDescripcion,
-                            CAST(V.U_SO1_USUARIO AS NVARCHAR(10)) + ' - ' + ISNULL(OHEM.firstName, '') AS Usuario,
-                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS Cantidad,
-                            'COMPLETADO' AS Estatus
-                        FROM [@SO1_01DEVOLCOMPRA] V WITH (NOLOCK)
-                        JOIN [@SO1_01DEVOLCOMPRADE] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
-                        LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
-                        WHERE CHARINDEX(',DX,', @TiposCSV) > 0
-                          AND CONVERT(VARCHAR, V.U_SO1_FECHA, 112) BETWEEN @FecIni AND @FecFin
-                        GROUP BY V.Name, V.U_SO1_FECHA, V.U_SO1_HORACADENA, V.U_SO1_USUARIO, OHEM.firstName
-
-                        UNION ALL
-
-                        -- TRASPASO SALIDA (S, X)
-                        SELECT
-                            V.U_SO1_FOLIO AS IdLote,
-                            V.U_SO1_FOLIO AS Folio,
-                            CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
-                            V.U_SO1_TIPO AS TipoSalida,
-                            CASE V.U_SO1_TIPO WHEN 'S' THEN 'TRASPASO SALIDA' WHEN 'X' THEN 'TRASPASO SAP' ELSE '' END AS TipoDescripcion,
-                            CAST(V.U_SO1_USUARIO AS NVARCHAR(10)) + ' - ' + ISNULL(OHEM.firstName, '') AS Usuario,
-                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS Cantidad,
-                            'COMPLETADO' AS Estatus
-                        FROM [@SO1_01TRASPASO] V WITH (NOLOCK)
-                        JOIN [@SO1_01TRASPASODET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.U_SO1_FOLIO AND VD.U_SO1_INSTANCIA = V.U_SO1_INSTANCIA
-                        LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
-                        WHERE CHARINDEX(',' + V.U_SO1_TIPO + ',', @TiposCSV) > 0
-                          AND CONVERT(VARCHAR, V.U_SO1_FECHA, 112) BETWEEN @FecIni AND @FecFin
-                        GROUP BY V.U_SO1_FOLIO, V.U_SO1_FECHA, V.U_SO1_HORACADENA, V.U_SO1_TIPO, V.U_SO1_USUARIO, OHEM.firstName
-                    ) t
-                    WHERE (@searchTermQ IS NULL OR @searchTermQ = ''
-                           OR Folio LIKE '%' + @searchTermQ + '%'
-                           OR TipoSalida LIKE '%' + @searchTermQ + '%'
-                           OR Usuario LIKE '%' + @searchTermQ + '%')
+                        IDMOV AS Id,
+                        IDLOTE AS IdLote,
+                        U_SO1_FOLIO AS Folio,
+                        CONVERT(VARCHAR, FECHAMOV, 103) + ' ' + CONVERT(VARCHAR, FECHAMOV, 108) AS FechaHora,
+                        TIPOMOV AS TipoSalida,
+                        CANTIDAD AS Cantidad,
+                        EXISTENCIA AS Existencia,
+                        ISNULL(UBICACION, '') AS Ubicacion,
+                        ISNULL(USERID, '') AS Usuario,
+                        ISNULL(ALMACEN, '') AS Almacen,
+                        ISNULL(SOCIO, '') AS Socio
+                    FROM LOTESMOV WITH (NOLOCK)
+                    WHERE CHARINDEX(',' + TIPOMOV + ',', @TiposCSV) > 0
+                      AND CONVERT(VARCHAR, FECHAMOV, 112) BETWEEN @FecIni AND @FecFin
+                      AND TIPOMOV <> '99'
+                      AND (@searchTermQ IS NULL OR @searchTermQ = ''
+                           OR IDLOTE LIKE '%' + @searchTermQ + '%'
+                           OR U_SO1_FOLIO LIKE '%' + @searchTermQ + '%'
+                           OR TIPOMOV LIKE '%' + @searchTermQ + '%'
+                           OR USERID LIKE '%' + @searchTermQ + '%')
                 )
                 SELECT * FROM CortesCTE
                 WHERE RowNum BETWEEN @Offset + 1 AND @Offset + @PageSize

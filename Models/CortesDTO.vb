@@ -13,10 +13,12 @@ Public Class CorteDTO
     Public Property Folio As String
     Public Property FechaHora As String
     Public Property TipoSalida As String
-    Public Property TipoDescripcion As String
-    Public Property Usuario As String
     Public Property Cantidad As Decimal
-    Public Property Estatus As String
+    Public Property Existencia As Decimal
+    Public Property Ubicacion As String
+    Public Property Usuario As String
+    Public Property Almacen As String
+    Public Property Socio As String
 End Class
 
 Public Class PagedResult(Of T)
