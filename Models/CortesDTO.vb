@@ -9,16 +9,14 @@ End Class
 
 Public Class CorteDTO
     Public Property Id As Long
+    Public Property IdLote As String
     Public Property Folio As String
     Public Property FechaHora As String
     Public Property TipoSalida As String
     Public Property TipoDescripcion As String
-    Public Property Sucursal As String
-    Public Property Caja As String
     Public Property Usuario As String
-    Public Property ImporteTotal As Decimal
+    Public Property Cantidad As Decimal
     Public Property Estatus As String
-    Public Property Observaciones As String
 End Class
 
 Public Class PagedResult(Of T)

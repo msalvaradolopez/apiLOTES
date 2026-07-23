@@ -1883,21 +1883,19 @@ Public Class consultas
                     SELECT
                         ROW_NUMBER() OVER (ORDER BY FechaHora DESC) AS RowNum,
                         COUNT(*) OVER() AS TotalRecords,
-                        Folio, FechaHora, TipoSalida, TipoDescripcion,
-                        Sucursal, Caja, Usuario, ImporteTotal, Estatus, Observaciones
+                        IdLote, Folio, FechaHora, TipoSalida, TipoDescripcion,
+                        Usuario, Cantidad, Estatus
                     FROM (
                         -- VENTAS (CA, CR)
                         SELECT
+                            V.Name AS IdLote,
                             V.Name AS Folio,
                             CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
                             V.U_SO1_TIPO AS TipoSalida,
                             CASE V.U_SO1_TIPO WHEN 'CR' THEN 'CONTADO' WHEN 'CA' THEN 'CREDITO' ELSE '' END AS TipoDescripcion,
-                            '' AS Sucursal,
-                            '' AS Caja,
                             CAST(V.U_SO1_USUARIO AS NVARCHAR(10)) + ' - ' + ISNULL(OHEM.firstName, '') AS Usuario,
-                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS ImporteTotal,
-                            'COMPLETADO' AS Estatus,
-                            '' AS Observaciones
+                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS Cantidad,
+                            'COMPLETADO' AS Estatus
                         FROM [@SO1_01VENTA] V WITH (NOLOCK)
                         JOIN [@SO1_01VENTADETALLE] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
                         LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
@@ -1909,16 +1907,14 @@ Public Class consultas
 
                         -- SALIDA DE MERCANCIA (SX)
                         SELECT
+                            V.Name AS IdLote,
                             V.Name AS Folio,
                             CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
                             'SX' AS TipoSalida,
                             'SALIDA MERCANCIA' AS TipoDescripcion,
-                            '' AS Sucursal,
-                            '' AS Caja,
                             CAST(V.U_SO1_USUARIO AS NVARCHAR(10)) + ' - ' + ISNULL(OHEM.firstName, '') AS Usuario,
-                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS ImporteTotal,
-                            'COMPLETADO' AS Estatus,
-                            '' AS Observaciones
+                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS Cantidad,
+                            'COMPLETADO' AS Estatus
                         FROM [@SO1_01SALIDAMERCAN] V WITH (NOLOCK)
                         JOIN [@SO1_01SALIDAMERDET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
                         LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
@@ -1930,16 +1926,14 @@ Public Class consultas
 
                         -- DEVOLUCION COMPRA (DX)
                         SELECT
+                            V.Name AS IdLote,
                             V.Name AS Folio,
                             CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
                             'DX' AS TipoSalida,
                             'DEV COMPRA' AS TipoDescripcion,
-                            '' AS Sucursal,
-                            '' AS Caja,
                             CAST(V.U_SO1_USUARIO AS NVARCHAR(10)) + ' - ' + ISNULL(OHEM.firstName, '') AS Usuario,
-                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS ImporteTotal,
-                            'COMPLETADO' AS Estatus,
-                            '' AS Observaciones
+                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS Cantidad,
+                            'COMPLETADO' AS Estatus
                         FROM [@SO1_01DEVOLCOMPRA] V WITH (NOLOCK)
                         JOIN [@SO1_01DEVOLCOMPRADE] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
                         LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
@@ -1951,16 +1945,14 @@ Public Class consultas
 
                         -- TRASPASO SALIDA (S, X)
                         SELECT
+                            V.U_SO1_FOLIO AS IdLote,
                             V.U_SO1_FOLIO AS Folio,
                             CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
                             V.U_SO1_TIPO AS TipoSalida,
                             CASE V.U_SO1_TIPO WHEN 'S' THEN 'TRASPASO SALIDA' WHEN 'X' THEN 'TRASPASO SAP' ELSE '' END AS TipoDescripcion,
-                            '' AS Sucursal,
-                            '' AS Caja,
                             CAST(V.U_SO1_USUARIO AS NVARCHAR(10)) + ' - ' + ISNULL(OHEM.firstName, '') AS Usuario,
-                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS ImporteTotal,
-                            'COMPLETADO' AS Estatus,
-                            '' AS Observaciones
+                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS Cantidad,
+                            'COMPLETADO' AS Estatus
                         FROM [@SO1_01TRASPASO] V WITH (NOLOCK)
                         JOIN [@SO1_01TRASPASODET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.U_SO1_FOLIO AND VD.U_SO1_INSTANCIA = V.U_SO1_INSTANCIA
                         LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
