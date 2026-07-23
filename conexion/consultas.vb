@@ -1878,8 +1878,7 @@ Public Class consultas
             DBcomando = New SqlCommand("
                 DECLARE @FecIni VARCHAR(8) = @fechaInicioSQL;
                 DECLARE @FecFin VARCHAR(8) = @fechaFinSQL;
-                DECLARE @Tipos TABLE (Tipo VARCHAR(10));
-                INSERT INTO @Tipos SELECT value FROM STRING_SPLIT(@tiposSalidaCSV, ',');
+                DECLARE @TiposCSV VARCHAR(200) = ',' + @tiposSalidaCSV + ',';
 
                 WITH CortesCTE AS (
                     SELECT
@@ -1890,7 +1889,7 @@ Public Class consultas
                     FROM (
                         -- VENTAS (CA, CR)
                         SELECT
-                            CAST(ROW_NUMBER() OVER (ORDER BY V.Name) AS BIGINT) AS Id,
+                            0 AS Id,
                             V.Name AS Folio,
                             CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
                             V.U_SO1_TIPO AS TipoSalida,
@@ -1905,7 +1904,7 @@ Public Class consultas
                         JOIN [@SO1_01VENTADETALLE] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
                         LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
                         LEFT JOIN OCRD WITH (NOLOCK) ON OCRD.CardCode = V.U_SO1_CLIENTE
-                        WHERE V.U_SO1_TIPO IN (SELECT Tipo FROM @Tipos WHERE Tipo IN ('CA', 'CR'))
+                        WHERE CHARINDEX(',' + V.U_SO1_TIPO + ',', @TiposCSV) > 0
                           AND CONVERT(VARCHAR, V.U_SO1_FECHA, 112) BETWEEN @FecIni AND @FecFin
                         GROUP BY V.Name, V.U_SO1_FECHA, V.U_SO1_HORACADENA, V.U_SO1_TIPO, V.U_SO1_USUARIO, OHEM.firstName, OCRD.City
 
@@ -1913,7 +1912,7 @@ Public Class consultas
 
                         -- SALIDA DE MERCANCIA (SX)
                         SELECT
-                            CAST(ROW_NUMBER() OVER (ORDER BY V.Name) AS BIGINT) + 100000000 AS Id,
+                            100000000 AS Id,
                             V.Name AS Folio,
                             CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
                             'SX' AS TipoSalida,
@@ -1927,7 +1926,7 @@ Public Class consultas
                         FROM [@SO1_01SALIDAMERCAN] V WITH (NOLOCK)
                         JOIN [@SO1_01SALIDAMERDET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
                         LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
-                        WHERE 'SX' IN (SELECT Tipo FROM @Tipos)
+                        WHERE CHARINDEX(',SX,', @TiposCSV) > 0
                           AND CONVERT(VARCHAR, V.U_SO1_FECHA, 112) BETWEEN @FecIni AND @FecFin
                         GROUP BY V.Name, V.U_SO1_FECHA, V.U_SO1_HORACADENA, V.U_SO1_USUARIO, OHEM.firstName
 
@@ -1935,7 +1934,7 @@ Public Class consultas
 
                         -- DEVOLUCION COMPRA (DX)
                         SELECT
-                            CAST(ROW_NUMBER() OVER (ORDER BY V.Name) AS BIGINT) + 200000000 AS Id,
+                            200000000 AS Id,
                             V.Name AS Folio,
                             CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
                             'DX' AS TipoSalida,
@@ -1949,15 +1948,15 @@ Public Class consultas
                         FROM [@SO1_01DEVOLCOMPRA] V WITH (NOLOCK)
                         JOIN [@SO1_01DEVOLCOMPRADE] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
                         LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
-                        WHERE 'DX' IN (SELECT Tipo FROM @Tipos)
+                        WHERE CHARINDEX(',DX,', @TiposCSV) > 0
                           AND CONVERT(VARCHAR, V.U_SO1_FECHA, 112) BETWEEN @FecIni AND @FecFin
                         GROUP BY V.Name, V.U_SO1_FECHA, V.U_SO1_HORACADENA, V.U_SO1_USUARIO, OHEM.firstName
 
                         UNION ALL
 
-                        -- TRASPASO SALIDA (S)
+                        -- TRASPASO SALIDA (S, X)
                         SELECT
-                            CAST(ROW_NUMBER() OVER (ORDER BY V.U_SO1_FOLIO) AS BIGINT) + 300000000 AS Id,
+                            300000000 AS Id,
                             V.U_SO1_FOLIO AS Folio,
                             CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
                             V.U_SO1_TIPO AS TipoSalida,
@@ -1971,7 +1970,7 @@ Public Class consultas
                         FROM [@SO1_01TRASPASO] V WITH (NOLOCK)
                         JOIN [@SO1_01TRASPASODET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.U_SO1_FOLIO AND VD.U_SO1_INSTANCIA = V.U_SO1_INSTANCIA
                         LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
-                        WHERE V.U_SO1_TIPO IN (SELECT Tipo FROM @Tipos WHERE Tipo IN ('S', 'X'))
+                        WHERE CHARINDEX(',' + V.U_SO1_TIPO + ',', @TiposCSV) > 0
                           AND CONVERT(VARCHAR, V.U_SO1_FECHA, 112) BETWEEN @FecIni AND @FecFin
                         GROUP BY V.U_SO1_FOLIO, V.U_SO1_FECHA, V.U_SO1_HORACADENA, V.U_SO1_TIPO, V.U_SO1_USUARIO, OHEM.firstName
                     ) t
