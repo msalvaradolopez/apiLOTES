@@ -1859,4 +1859,148 @@ Public Class consultas
         Return resultado
     End Function
 
+    Public Function getCortesDelDia(ByVal fechaInicio As String,
+                                    ByVal fechaFin As String,
+                                    ByVal tiposSalida As String,
+                                    ByVal pageNumber As Integer,
+                                    ByVal pageSize As Integer,
+                                    ByVal searchTerm As String) As DataTable
+        Dim odtConsulta As New DataTable()
+        Try
+            If DBConn.State = ConnectionState.Closed Then DBConn.Open()
+
+            Dim aFechaIni As String() = fechaInicio.Split("/"c)
+            Dim aFechaFin As String() = fechaFin.Split("/"c)
+            Dim fechaIniSQL As String = aFechaIni(2) & aFechaIni(1) & aFechaIni(0)
+            Dim fechaFinSQL As String = aFechaFin(2) & aFechaFin(1) & aFechaFin(0)
+            Dim offset As Integer = (pageNumber - 1) * pageSize
+
+            DBcomando = New SqlCommand("
+                DECLARE @FecIni VARCHAR(8) = @fechaInicioSQL;
+                DECLARE @FecFin VARCHAR(8) = @fechaFinSQL;
+                DECLARE @Tipos TABLE (Tipo VARCHAR(10));
+                INSERT INTO @Tipos SELECT value FROM STRING_SPLIT(@tiposSalidaCSV, ',');
+
+                WITH CortesCTE AS (
+                    SELECT
+                        ROW_NUMBER() OVER (ORDER BY FechaHora DESC) AS RowNum,
+                        COUNT(*) OVER() AS TotalRecords,
+                        Id, Folio, FechaHora, TipoSalida, TipoDescripcion,
+                        Sucursal, Caja, Usuario, ImporteTotal, Estatus, Observaciones
+                    FROM (
+                        -- VENTAS (CA, CR)
+                        SELECT
+                            CAST(ROW_NUMBER() OVER (ORDER BY V.Name) AS BIGINT) AS Id,
+                            V.Name AS Folio,
+                            CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
+                            V.U_SO1_TIPO AS TipoSalida,
+                            CASE V.U_SO1_TIPO WHEN 'CR' THEN 'CONTADO' WHEN 'CA' THEN 'CREDITO' ELSE '' END AS TipoDescripcion,
+                            ISNULL(OCRD.City, '') AS Sucursal,
+                            '' AS Caja,
+                            CAST(V.U_SO1_USUARIO AS NVARCHAR(10)) + ' - ' + ISNULL(OHEM.firstName, '') AS Usuario,
+                            ISNULL(SUM(VD.U_SO1_CANTIDAD * VD.U_SO1_PRECIO), 0) AS ImporteTotal,
+                            'COMPLETADO' AS Estatus,
+                            '' AS Observaciones
+                        FROM [@SO1_01VENTA] V WITH (NOLOCK)
+                        JOIN [@SO1_01VENTADETALLE] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
+                        LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
+                        LEFT JOIN OCRD WITH (NOLOCK) ON OCRD.CardCode = V.U_SO1_CLIENTE
+                        WHERE V.U_SO1_TIPO IN (SELECT Tipo FROM @Tipos WHERE Tipo IN ('CA', 'CR'))
+                          AND CONVERT(VARCHAR, V.U_SO1_FECHA, 112) BETWEEN @FecIni AND @FecFin
+                        GROUP BY V.Name, V.U_SO1_FECHA, V.U_SO1_HORACADENA, V.U_SO1_TIPO, V.U_SO1_USUARIO, OHEM.firstName, OCRD.City
+
+                        UNION ALL
+
+                        -- SALIDA DE MERCANCIA (SX)
+                        SELECT
+                            CAST(ROW_NUMBER() OVER (ORDER BY V.Name) AS BIGINT) + 100000000 AS Id,
+                            V.Name AS Folio,
+                            CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
+                            'SX' AS TipoSalida,
+                            'SALIDA MERCANCIA' AS TipoDescripcion,
+                            '' AS Sucursal,
+                            '' AS Caja,
+                            CAST(V.U_SO1_USUARIO AS NVARCHAR(10)) + ' - ' + ISNULL(OHEM.firstName, '') AS Usuario,
+                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS ImporteTotal,
+                            'COMPLETADO' AS Estatus,
+                            '' AS Observaciones
+                        FROM [@SO1_01SALIDAMERCAN] V WITH (NOLOCK)
+                        JOIN [@SO1_01SALIDAMERDET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
+                        LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
+                        WHERE 'SX' IN (SELECT Tipo FROM @Tipos)
+                          AND CONVERT(VARCHAR, V.U_SO1_FECHA, 112) BETWEEN @FecIni AND @FecFin
+                        GROUP BY V.Name, V.U_SO1_FECHA, V.U_SO1_HORACADENA, V.U_SO1_USUARIO, OHEM.firstName
+
+                        UNION ALL
+
+                        -- DEVOLUCION COMPRA (DX)
+                        SELECT
+                            CAST(ROW_NUMBER() OVER (ORDER BY V.Name) AS BIGINT) + 200000000 AS Id,
+                            V.Name AS Folio,
+                            CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
+                            'DX' AS TipoSalida,
+                            'DEV COMPRA' AS TipoDescripcion,
+                            '' AS Sucursal,
+                            '' AS Caja,
+                            CAST(V.U_SO1_USUARIO AS NVARCHAR(10)) + ' - ' + ISNULL(OHEM.firstName, '') AS Usuario,
+                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS ImporteTotal,
+                            'COMPLETADO' AS Estatus,
+                            '' AS Observaciones
+                        FROM [@SO1_01DEVOLCOMPRA] V WITH (NOLOCK)
+                        JOIN [@SO1_01DEVOLCOMPRADE] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.Name
+                        LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
+                        WHERE 'DX' IN (SELECT Tipo FROM @Tipos)
+                          AND CONVERT(VARCHAR, V.U_SO1_FECHA, 112) BETWEEN @FecIni AND @FecFin
+                        GROUP BY V.Name, V.U_SO1_FECHA, V.U_SO1_HORACADENA, V.U_SO1_USUARIO, OHEM.firstName
+
+                        UNION ALL
+
+                        -- TRASPASO SALIDA (S)
+                        SELECT
+                            CAST(ROW_NUMBER() OVER (ORDER BY V.U_SO1_FOLIO) AS BIGINT) + 300000000 AS Id,
+                            V.U_SO1_FOLIO AS Folio,
+                            CONVERT(VARCHAR, CAST(V.U_SO1_FECHA AS DATE), 103) + ' ' + V.U_SO1_HORACADENA AS FechaHora,
+                            V.U_SO1_TIPO AS TipoSalida,
+                            CASE V.U_SO1_TIPO WHEN 'S' THEN 'TRASPASO SALIDA' WHEN 'X' THEN 'TRASPASO SAP' ELSE '' END AS TipoDescripcion,
+                            '' AS Sucursal,
+                            '' AS Caja,
+                            CAST(V.U_SO1_USUARIO AS NVARCHAR(10)) + ' - ' + ISNULL(OHEM.firstName, '') AS Usuario,
+                            ISNULL(SUM(VD.U_SO1_CANTIDAD), 0) AS ImporteTotal,
+                            'COMPLETADO' AS Estatus,
+                            '' AS Observaciones
+                        FROM [@SO1_01TRASPASO] V WITH (NOLOCK)
+                        JOIN [@SO1_01TRASPASODET] VD WITH (NOLOCK) ON VD.U_SO1_FOLIO = V.U_SO1_FOLIO AND VD.U_SO1_INSTANCIA = V.U_SO1_INSTANCIA
+                        LEFT JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
+                        WHERE V.U_SO1_TIPO IN (SELECT Tipo FROM @Tipos WHERE Tipo IN ('S', 'X'))
+                          AND CONVERT(VARCHAR, V.U_SO1_FECHA, 112) BETWEEN @FecIni AND @FecFin
+                        GROUP BY V.U_SO1_FOLIO, V.U_SO1_FECHA, V.U_SO1_HORACADENA, V.U_SO1_TIPO, V.U_SO1_USUARIO, OHEM.firstName
+                    ) t
+                    WHERE (@searchTermQ IS NULL OR @searchTermQ = ''
+                           OR Folio LIKE '%' + @searchTermQ + '%'
+                           OR TipoSalida LIKE '%' + @searchTermQ + '%'
+                           OR Usuario LIKE '%' + @searchTermQ + '%')
+                )
+                SELECT * FROM CortesCTE
+                WHERE RowNum BETWEEN @Offset + 1 AND @Offset + @PageSize
+                ORDER BY RowNum;
+            ", DBConn)
+
+            DBcomando.Parameters.AddWithValue("@fechaInicioSQL", fechaIniSQL)
+            DBcomando.Parameters.AddWithValue("@fechaFinSQL", fechaFinSQL)
+            DBcomando.Parameters.AddWithValue("@tiposSalidaCSV", tiposSalida)
+            DBcomando.Parameters.AddWithValue("@Offset", offset)
+            DBcomando.Parameters.AddWithValue("@PageSize", pageSize)
+            DBcomando.Parameters.AddWithValue("@searchTermQ", If(String.IsNullOrEmpty(searchTerm), CObj(DBNull.Value), CObj(searchTerm)))
+
+            DBAdaptador = New SqlDataAdapter(DBcomando)
+            DBAdaptador.Fill(odtConsulta)
+
+            Return odtConsulta
+        Catch ex As Exception
+            Return Nothing
+        Finally
+            If DBConn.State = ConnectionState.Open Then DBConn.Close()
+        End Try
+    End Function
+
 End Class

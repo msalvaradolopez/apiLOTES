@@ -227,6 +227,8 @@
     </Compile>
     <Compile Include="Controllers\HomeController.vb" />
     <Compile Include="Controllers\ValuesController.vb" />
+    <Compile Include="Controllers\CortesController.vb" />
+    <Compile Include="Models\CortesDTO.vb" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="My Project\Resources.resx">
