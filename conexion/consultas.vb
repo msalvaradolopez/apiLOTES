@@ -483,7 +483,7 @@ Public Class consultas
                                   JOIN OHEM WITH (NOLOCK) ON OHEM.empID = V.U_SO1_USUARIO
                                   JOIN OCRD WITH (NOLOCK) ON OCRD.CardCode = V.U_SO1_CLIENTE
                                   INNER JOIN OITM t2 WITH (NOLOCK) on t2.ItemCode = VD.U_SO1_NUMEROARTICULO AND T2.U_Lote = 'Y'
-                                  WHERE V.U_SO1_TIPO IN ('CR', 'CA')
+                                  WHERE V.U_SO1_TIPO IN ('CR', 'CA', 'EN')
                                        AND EXISTS (SELECT 1 
 				                                        FROM LOTESMOV T1 WITH (NOLOCK) 
 				                                        WHERE T1.U_SO1_NUMEROARTICULO = VD.U_SO1_NUMEROARTICULO 
