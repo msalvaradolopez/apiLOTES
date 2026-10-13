@@ -823,37 +823,69 @@ Public Class consultas
     End Function
 
     Public Sub setMovtoSalida(oLote As tbLote, ByRef asError As String)
-        Dim odtProveedores As New DataTable
         Dim fechaActual = Date.Now()
         Dim yaExiste As Integer = 0
+        Dim existenciaPadre As Decimal = 0
+        Dim filasAfectadas As Integer = 0
+
+        asError = ""
+
+        ' REGLA DETERMINISTA: IDMOVORIGEN > 0 => es una salida que SIEMPRE descuenta del padre.
+        If oLote.IDMOVORIGEN <= 0 Then
+            asError = "No se puede registrar la salida: el movimiento no tiene un lote origen (IDMOVORIGEN) válido."
+            Return
+        End If
+
+        ' VALIDACIÓN DE CANTIDAD.
+        If oLote.CANTIDAD <= 0 Then
+            asError = "Debe de capturar un valor mayor a 0 en el campo CANTIDAD."
+            Return
+        End If
 
         If DBConn.State = ConnectionState.Closed Then DBConn.Open()
 
-        Dim myTrans As SqlTransaction = DBConn.BeginTransaction()
+        Dim myTrans As SqlTransaction = DBConn.BeginTransaction(IsolationLevel.ReadCommitted)
 
         Try
 
+            ' BLOQUEO PESIMISTA (UPDLOCK, ROWLOCK) Y LECTURA DE LA EXISTENCIA DEL PADRE.
+            DBcomando = New SqlCommand("SELECT EXISTENCIA FROM LOTESMOV WITH (UPDLOCK, ROWLOCK) WHERE IDMOV = @idmov AND (IDMOVORIGEN IS NULL OR IDMOVORIGEN = 0)", DBConn, myTrans)
+            DBcomando.Parameters.AddWithValue("@idmov", oLote.IDMOVORIGEN)
+            Dim existenciaResult As Object = DBcomando.ExecuteScalar()
 
-            ' AFECTA INVENTARIO.
+            If existenciaResult Is Nothing OrElse existenciaResult Is DBNull.Value Then
+                asError = "No se encontró el lote origen (IDMOV=" & oLote.IDMOVORIGEN.ToString() & ") o no es un registro padre."
+                myTrans.Rollback()
+                Return
+            End If
+
+            existenciaPadre = Convert.ToDecimal(existenciaResult)
+
+            ' VALIDACIÓN DE EXISTENCIA SUFICIENTE.
+            If existenciaPadre < oLote.CANTIDAD Then
+                asError = "Existencia insuficiente en el lote. Disponible: " & existenciaPadre.ToString() & ", Solicitado: " & oLote.CANTIDAD.ToString()
+                myTrans.Rollback()
+                Return
+            End If
+
+            ' AFECTA INVENTARIO (DESCUENTA DEL PADRE) DENTRO DE LA MISMA TRANSACCIÓN.
             DBcomando = New SqlCommand("UPDATE LOTESMOV
                                   set EXISTENCIA = EXISTENCIA - @ctdSalida,
                                        IMPRIMIR = 'S'
-                                  where idmov = @idmov ", DBConn)
+                                  where idmov = @idmov ", DBConn, myTrans)
             DBcomando.Parameters.AddWithValue("@idmov", oLote.IDMOVORIGEN)
             DBcomando.Parameters.AddWithValue("@ctdSalida", oLote.CANTIDAD)
-            DBcomando.Transaction = myTrans
-            DBcomando.ExecuteNonQuery()
+            filasAfectadas = DBcomando.ExecuteNonQuery()
+
+            If filasAfectadas <= 0 Then
+                asError = "No se pudo actualizar la existencia del lote origen."
+                myTrans.Rollback()
+                Return
+            End If
 
             oLote.CONS = 0
 
             If oLote.IDMOV = 0 Then
-
-
-                If oLote.CANTIDAD <= 0 Then
-                    asError = "Deb de capturar valor mayor a 0 en el campo CANTIDAD."
-                    Return
-                End If
-
 
                 DBcomando = New SqlCommand("select yaExiste = isnull(count(1), 0)
                                       from LOTESMOV
@@ -873,14 +905,15 @@ Public Class consultas
                 yaExiste = Convert.ToInt32(DBcomando.ExecuteScalar())
 
                 If yaExiste > 0 Then
-                    asError = "ya existe un movimiento de salida."
+                    asError = "Ya existe un movimiento de salida para este lote."
+                    myTrans.Rollback()
                     Return
                 End If
 
                 DBcomando = New SqlCommand("INSERT INTO LOTESMOV(U_SO1_NUMEROARTICULO,U_SO1_FOLIO,U_SO1_NUMPARTIDA,IDLOTE,ALMACEN,TIPOMOV,DOCTO,FECHADOC,SOCIO,
                                                             VENDEDOR,CANTIDAD,EXISTENCIA,UBICACION,USUARIO_R1,USERID,FECHAMOV,CONS, IDMOVORIGEN)
                                     values(@U_SO1_NUMEROARTICULO, @U_SO1_FOLIO, @U_SO1_NUMPARTIDA, @IDLOTE, @ALMACEN, @TIPOMOV, @DOCTO,  @FECHAMOV, @SOCIO,
-                                                    @VENDEDOR, @CANTIDAD, @EXISTENCIA, @UBICACION, @USUARIO_R1, @USERID, @FECHAMOV, @CONS, @IDMOVORIGEN) ", DBConn)
+                                                    @VENDEDOR, @CANTIDAD, @EXISTENCIA, @UBICACION, @USUARIO_R1, @USERID, @FECHAMOV, @CONS, @IDMOVORIGEN) ", DBConn, myTrans)
 
 
             Else
@@ -941,8 +974,10 @@ Public Class consultas
 
         Catch ex As Exception
             asError = ex.Message.ToString()
-            myTrans.Rollback()
-            Return
+            Try
+                myTrans.Rollback()
+            Catch
+            End Try
         Finally
             If DBConn.State = ConnectionState.Open Then DBConn.Close()
         End Try

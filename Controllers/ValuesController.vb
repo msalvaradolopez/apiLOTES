@@ -1,4 +1,5 @@
 ﻿Imports System.Net
+Imports System.Net.Http
 Imports System.Web.Http
 Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Converters
@@ -226,13 +227,17 @@ Public Class ValuesController
         oConsultas.setMovtoSalida(_lote, lsError)
 
         If Not String.IsNullOrEmpty(lsError) Then
+            ' Se devuelve HTTP 400 con el detalle para que la app lo muestre al usuario.
             oMensajes.codigo = -1 ' Error
             oMensajes.mensaje = lsError
-        Else
-            oMensajes.codigo = 1 ' ok
-            oMensajes.mensaje = "Salida registrada con exito."
+            Dim jsonError As String = JsonConvert.SerializeObject(oMensajes, Newtonsoft.Json.Formatting.None)
+            Dim respuesta As New HttpResponseMessage(HttpStatusCode.BadRequest)
+            respuesta.Content = New StringContent(jsonError, System.Text.Encoding.UTF8, "application/json")
+            Throw New HttpResponseException(respuesta)
         End If
 
+        oMensajes.codigo = 1 ' ok
+        oMensajes.mensaje = "Salida registrada con exito."
         Return JsonConvert.SerializeObject(oMensajes, Newtonsoft.Json.Formatting.None)
     End Function
 
